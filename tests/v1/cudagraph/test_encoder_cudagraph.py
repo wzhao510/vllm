@@ -108,12 +108,18 @@ def _make_manager_with_budgets(budgets: list[int]) -> EncoderCudaGraphManager:
     mgr.token_budgets = sorted(budgets)
     mgr.path_token_budgets = {"default": mgr.token_budgets}
     mgr.max_batch_size = 16
+    mgr.max_frames_per_batch = 0
     mgr.use_dp = False
-    mgr.config = EncoderCudaGraphConfig(
+    cfg = EncoderCudaGraphConfig(
         modalities=["image"],
         buffer_keys=[],
         out_hidden_size=32,
     )
+    try:
+        cfg.enable_dual_path_graph = False
+    except AttributeError:
+        object.__setattr__(cfg, "enable_dual_path_graph", False)
+    mgr.config = cfg
     mgr.budget_graphs = {"default": {}}
     mgr.graph_pool = None
     mgr.graph_hits = 0
