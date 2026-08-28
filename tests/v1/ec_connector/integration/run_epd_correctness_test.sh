@@ -108,7 +108,7 @@ run_baseline() {
         --port "$PORT" \
         --max-model-len "$MAX_MODEL_LEN" \
         --enforce-eager \
-        --gpu-memory-utilization 0.9 \
+        --gpu-memory-utilization "$GPU_MEMORY_UTILIZATION" \
         --max-num-seqs "$MAX_NUM_SEQS" \
         --allowed-local-media-path "${GIT_ROOT}"/tests/v1/ec_connector/integration \
         > "$LOG_PATH"/baseline.log 2>&1 &
