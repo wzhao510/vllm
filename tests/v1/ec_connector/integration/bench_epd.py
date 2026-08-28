@@ -56,7 +56,8 @@ def gpu_mem_snapshot() -> str:
 
 def measure_ttft(image_path: str, max_tokens: int = MAX_TOKENS):
     """发 streaming 请求,测 TTFT 和总耗时."""
-    client = openai.OpenAI(api_key="EMPTY", base_url=PROXY_URL)
+    # base_url 必须带 /v1 后缀,与 test_epd_correctness.py 保持一致
+    client = openai.OpenAI(api_key="EMPTY", base_url=f"{PROXY_URL}/v1")
     msg = {
         "role": "user",
         "content": [
