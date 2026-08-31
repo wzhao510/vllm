@@ -19,6 +19,8 @@ import requests
 PROXY_URL = os.environ.get("PROXY_URL", "http://localhost:10001")
 MODEL = os.environ.get("MODEL", "/home/i26440/Qwen/Qwen3-VL-4B-Instruct")
 EC_STORAGE = os.environ.get("EC_SHARED_STORAGE_PATH", "/tmp/ec_cache_test")
+# 输出文件/标题标签,区分 1E1PD vs 1E1P1D
+BENCH_MODE = os.environ.get("BENCH_MODE", "1E1PD")
 
 IMG_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGES = [
@@ -47,11 +49,18 @@ def list_cache_files() -> list:
 
 
 def gpu_mem_snapshot() -> str:
-    """抓 mx-smi 输出."""
+    """抓 mx-smi 前 20 行输出(含表头、GPU 汇总、前几张卡显存)."""
     try:
-        return subprocess.check_output(["mx-smi"], text=True, timeout=10)
+        raw = subprocess.check_output(
+            ["mx-smi"], text=True, timeout=15
+        ).splitlines()
     except Exception as e:  # noqa: BLE001
         return f"mx-smi failed: {e}"
+    # 取前 20 行,尾部留省略标记便于定位
+    shown = raw[:20]
+    if len(raw) > 20:
+        shown.append(f" ... ({len(raw) - 20} more lines omitted)")
+    return "\n".join(shown)
 
 
 def measure_ttft(image_path: str, max_tokens: int = MAX_TOKENS):
@@ -100,7 +109,7 @@ def check_proxy() -> bool:
 
 
 def main() -> None:
-    print(f"=== EPD Benchmark ===")
+    print(f"=== EPD Benchmark ({BENCH_MODE}) ===")
     print(f"Proxy:    {PROXY_URL}")
     print(f"Model:    {MODEL}")
     print(f"EC cache: {EC_STORAGE}")
@@ -166,12 +175,13 @@ def main() -> None:
         })
 
     print("\n=== Summary ===")
+    mode_tag = f" ({BENCH_MODE})"
     header = (
         f"{'Image':<20} {'Tokens':<10} "
         f"{'ColdTTFT(ms)':<15} {'WarmTTFT(ms)':<15} "
         f"{'Speedup':<10} {'Cache':<8}"
     )
-    print(header)
+    print(header + mode_tag)
     print("-" * len(header))
     for r in results:
         print(
@@ -180,7 +190,7 @@ def main() -> None:
             f"{r['speedup']:<10.2f} {r['cache_files']:<8}"
         )
 
-    out_json = "/tmp/epd_bench_results.json"
+    out_json = f"/tmp/epd_bench_results_{BENCH_MODE}.json"
     with open(out_json, "w") as f:
         json.dump(results, f, indent=2)
     print(f"\nResults saved to {out_json}")
